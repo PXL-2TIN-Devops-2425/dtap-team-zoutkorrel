@@ -8,14 +8,26 @@ pipeline{
             steps{
                 sshagent(['aws']){
                     sh"""
-                        ssh -o StrictHostKeyChecking=no ubuntu@3.94.192.95 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login --username $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-                        ssh -o StrictHostKeyChecking=no ubuntu@3.94.192.95 'docker pull $DOCKERHUB_CREDENTIALS_USR/devops-pe'
+                        ssh -o StrictHostKeyChecking=no ubuntu@44.222.204.224 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login --username $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                        ssh -o StrictHostKeyChecking=no ubuntu@44.222.204.224 'docker pull $DOCKERHUB_CREDENTIALS_USR/devops-pe'
                     """
                 }
             }
         }
+        stage('start prod'){
+            steps{
+                sshagent(['aws']){
+                    sh"""
+                        ssh -o StrictHostKeyChecking=no ubuntu@44.222.204.224 'docker stop calculator-app || true'
+                        ssh -o StrictHostKeyChecking=no ubuntu@44.222.204.224 'docker rm calculator-app || true'
+                        ssh -o StrictHostKeyChecking=no ubuntu@44.222.204.224 'docker run -d --name calculator-app -p 80:3000 $DOCKERHUB_CREDENTIALS_USR/devops-pe' 
+                    """
+                }
+                
+            }
+        }
     }
-    post{
+     post{
         always{
             sh 'docker logout'
         }
