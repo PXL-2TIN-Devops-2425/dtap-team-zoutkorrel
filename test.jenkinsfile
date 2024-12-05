@@ -1,16 +1,16 @@
 pipeline {
     agent any
-    tools{
+    tools {
         nodejs 'testenvnode'
     }
     stages {
-        stage ('cleanup'){
-            steps{
+        stage('cleanup') {
+            steps {
                 deleteDir()
             }
         }
-        stage('Install dependencies'){
-            steps{
+        stage('Install dependencies') {
+            steps {
                 sh "npm install express"
             }
         }
@@ -23,30 +23,32 @@ pipeline {
         stage('Build artifact') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Dockerhub', passwordVariable: 'DOCKERHUB_PSW', usernameVariable: 'DOCKERHUB_USR')]) {
+                    script {
+                        env.DOCKERHUB_USR = DOCKERHUB_USR
+                        env.DOCKERHUB_PSW = DOCKERHUB_PSW
+                    }
                     sh 'docker build -t $DOCKERHUB_USR/devops-pe .'
                 }
             }
         }
-        stage('Push artifact'){
-            steps{
-                withCredentials([usernamePassword(credentialsId: 'Dockerhub', passwordVariable: 'DOCKERHUB_PSW', usernameVariable: 'DOCKERHUB_USR')]) {
-                    script {
-                        sh "echo \'$DOCKERHUB_PSW\' | docker login -u \'$DOCKERHUB_USR\' --password-stdin docker.io"
-                        sh "docker push $DOCKERHUB_USR/devops-pe"
-                    }
+        stage('Push artifact') {
+            steps {
+                script {
+                    sh """
+                    echo \$DOCKERHUB_PSW | docker login -u \$DOCKERHUB_USR --password-stdin docker.io
+                    """
+                    sh "docker push $DOCKERHUB_USR/devops-pe"
                 }
             }
         }
-        stage('deployment'){
-            steps{
-                withCredentials([usernamePassword(credentialsId: 'Dockerhub', passwordVariable: 'DOCKERHUB_PSW', usernameVariable: 'DOCKERHUB_USR')]) {
-                    script {
-                        sh "docker image rm $DOCKERHUB_USR/devops-pe"
-                        sh "docker stop calculator-app || true"
-                        sh "docker rm calculator-app || true"
-                        sh "docker pull $DOCKERHUB_USR/devops-pe"
-                        sh "docker run -d --name calculator-app -p 3000:3000 $DOCKERHUB_USR/devops-pe"
-                    }
+        stage('deployment') {
+            steps {
+                script {
+                    sh "docker image rm $DOCKERHUB_USR/devops-pe"
+                    sh "docker stop calculator-app || true"
+                    sh "docker rm calculator-app || true"
+                    sh "docker pull $DOCKERHUB_USR/devops-pe"
+                    sh "docker run -d --name calculator-app -p 3000:3000 $DOCKERHUB_USR/devops-pe"
                 }
             }
         }
