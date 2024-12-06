@@ -1,16 +1,14 @@
 pipeline {
     agent any
     environment {
-        DOCKERHUB_CREDENTIALS = credentials("Dockerhub")
-        PROD_SERVER = "3.87.202.166"
+        PROD_SERVER = "3.88.207.153"
     }
     stages {
         stage('deploy prod') {
             steps {
                 sshagent(['aws']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login --username $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker pull $DOCKERHUB_CREDENTIALS_USR/devops-pe'
+                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker pull stroevelke/devops-pe'
                     """
                 }
             }
@@ -21,7 +19,7 @@ pipeline {
                     sh """
                         ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker stop calculator-app || true'
                         ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker rm calculator-app || true'
-                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker run -d --name calculator-app -p 80:3000 $DOCKERHUB_CREDENTIALS_USR/devops-pe'
+                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker run -d --name calculator-app -p 80:3000 stroevelke/devops-pe'
                     """
                 }
             }
@@ -36,17 +34,7 @@ pipeline {
                     if (statusCode != '200') {
                         error "Application did not return HTTP 200 OK, but instead returned ${statusCode}"
                     }
-                    
                 }
-            }
-        }
-    }
-    post {
-        always {
-            sshagent(['aws']) {
-                sh """
-                    ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker logout'
-                """
             }
         }
     }
