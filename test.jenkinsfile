@@ -1,10 +1,17 @@
 pipeline {
     agent any
-  
+    tools {
+        nodejs 'testenvnode'
+    }
     stages {
-        stage ('cleanup'){
-            steps{
-                // TODO
+        stage('cleanup') {
+            steps {
+                deleteDir()
+            }
+        }
+        stage('Install dependencies') {
+            steps {
+                sh "npm install express"
             }
         }
         stage('fetch app code') {
@@ -12,6 +19,41 @@ pipeline {
                 // Get some code from a GitHub repository
                 git branch: 'main', url: 'https://github.com/PXL-2TIN-DevOps-Resources/calculator-app-finished.git'
             }
+        }
+        stage('Build artifact') {
+            steps {
+                sh 'docker build -t stroevelke/devops-pe .'
+            }
+        }
+        stage('Push artifact') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'Dockerhub', passwordVariable: 'DOCKERHUB_PSW', usernameVariable: 'DOCKERHUB_USR')]) {
+                    script {
+                        sh """
+                        echo \$DOCKERHUB_PSW | docker login -u \$DOCKERHUB_USR --password-stdin docker.io
+                        """
+                        sh "docker push $DOCKERHUB_USR/devops-pe"
+                        echo "dit zijn de images"
+                    }
+                    
+                }         
+            }
+        }
+        stage('deployment') {
+            steps {
+                script {
+                    sh "docker image rm stroevelke/devops-pe"
+                    sh "docker stop calculator-app || true"
+                    sh "docker rm calculator-app || true"
+                    sh "docker pull stroevelke/devops-pe"
+                    sh "docker run -d --name calculator-app -p 3000:3000 stroevelke/devops-pe"
+                }
+            }
+        }
+    }
+    post {
+        always {
+            sh 'docker logout' 
         }
     }
 }

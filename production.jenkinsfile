@@ -1,9 +1,40 @@
 pipeline {
     agent any
+    environment {
+        PROD_SERVER = "3.88.207.153"
+    }
     stages {
-        stage('dtap production') {
+        stage('deploy prod') {
             steps {
-                echo "good luck..."
+                sshagent(['aws']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker pull stroevelke/devops-pe'
+                    """
+                }
+            }
+        }
+        stage('start prod') {
+            steps {
+                sshagent(['aws']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker stop calculator-app || true'
+                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker rm calculator-app || true'
+                        ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER} 'docker run -d --name calculator-app -p 80:3000 stroevelke/devops-pe'
+                    """
+                }
+            }
+        }
+        stage('test prod') {
+            steps {
+                script {
+                    def statusCode = sh(script: "curl -I -s -o /dev/null -w '%{http_code}' http://${PROD_SERVER}", returnStdout: true).trim()
+                    
+                    echo "HTTP Status Code from ${PROD_SERVER}: ${statusCode}"
+                    
+                    if (statusCode != '200') {
+                        error "Application did not return HTTP 200 OK, but instead returned ${statusCode}"
+                    }
+                }
             }
         }
     }

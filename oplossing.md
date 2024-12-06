@@ -2,5 +2,14 @@ Vul onderstaande aan met de antwoorden op de vragen uit de readme.md file. Wil j
 opmaak met Markdown.
 
 a)
+To give Jenkins the rights to run docker commands without using sudo, we had to do this:
+sudo usermod -aG docker jenkins
+
+sudo su - jenkins
+
+This added jenkins to the docker group
+
+We added our Dockerhub credentials so we can use them in the pipeline.
+![alt text](image.png)
 
 b)
