@@ -9,4 +9,7 @@ sudo su - jenkins
 
 This added jenkins to the docker group
 
+We added our Dockerhub credentials so we can use them in the pipeline.
+![alt text](image.png)
+
 b)
